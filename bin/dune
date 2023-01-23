@@ -1,5 +1,5 @@
 (executable
  (public_name sudoku)
  (name main)
- (libraries sudoku containers)
+ (libraries sudoku containers lablgtk3)
  (flags -open Containers))

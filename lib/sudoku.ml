@@ -1,31 +1,4 @@
-open Sexplib
-
-(* module IntSet = struct *)
-(*   module ShowableInt = struct *)
-(*     include Int *)
-
-(*     type t = Int.t [@@deriving eq] *)
-(*   end *)
-
-(*   module I = Set.Make (ShowableInt) *)
-(*   include I *)
-
-(*   type t = I.t [@@deriving eq] *)
-(* end *)
-module Int = struct
-  include Int
-
-  type t = Int.t [@@deriving show, eq]
-
-  let sexp_of_t t = Sexp.of_string (string_of_int t)
-end
-
-module IntSet = struct
-  module IntSet' = Set.Make (Int)
-  include IntSet'
-
-  let sexp_of_t t = Sexp.List (List.map Int.sexp_of_t (IntSet'.to_list t))
-end
+module IntSet = Set.Make (Int)
 
 let all_numbers = IntSet.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9 ]
 
