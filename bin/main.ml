@@ -16,7 +16,7 @@ let gui_main () =
   let _ = window#connect#destroy ~callback:GMain.quit in
   let hbox = GPack.hbox ~packing:window#add () in
   let button = GButton.button ~label:"Butto!" ~packing:hbox#pack () in
-  ignore button;
+  let _ = button#connect#clicked ~callback:GMain.quit in
   window#show ();
   GMain.main ()
 
