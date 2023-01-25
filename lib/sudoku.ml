@@ -1,11 +1,18 @@
-module IntSet = Set.Make (Int)
+module IntSet = struct
+  module IntSet' = Set.Make (Int)
+  include IntSet'
+
+  let pp fmt t =
+    Format.fprintf fmt "%s"
+      (String.concat ", " (List.map string_of_int (IntSet'.to_list t)))
+end
 
 let all_numbers = IntSet.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9 ]
 
 exception Number_ouf_of_range
 
-type square = Filled of Int.t | Annotations of IntSet.t [@@deriving eq]
-type t = square Array.t [@@deriving eq]
+type square = Filled of Int.t | Annotations of IntSet.t [@@deriving eq, show]
+type t = square Array.t [@@deriving eq, show]
 
 let copy = Array.copy
 
@@ -150,21 +157,38 @@ let fill_obvious_squares t =
           else t)
     t all_coordinates
 
+let project_rows_from_houses t = t
+let project_cols_from_houses t = t
+let x_wing t = t
+let y_wing t = t
+
 let try_all_strategies t =
-  let attempt = remove_directly_seen_numbers_from_annotations t in
-  if not (equal attempt t) then Some attempt
-  else
-    let attempt = fill_obvious_squares t in
-    if not (equal attempt t) then Some attempt else None
+  let strategies =
+    [
+      remove_directly_seen_numbers_from_annotations;
+      fill_obvious_squares;
+      project_rows_from_houses;
+      project_cols_from_houses;
+      x_wing;
+      y_wing;
+    ]
+  in
+  (* Return the result of the first strategy that makes progress *)
+  List.find_map
+    (fun strat ->
+      let res = strat t in
+      if not (equal res t) then Some res else None)
+    strategies
 
 let solve t =
   let annotated = fully_annotate t in
-  let rec solve' t =
-    if not (is_probably_valid t) then Error "The board is invalid"
-    else if is_solved t then Ok t
-    else
-      match try_all_strategies t with
-      | Some new_t -> solve' new_t
-      | None -> Error "Unable to solve. Not smart enough."
-  in
-  solve' annotated
+  if not (is_probably_valid t) then Error "The board is invalid"
+  else
+    let rec solve' t =
+      if is_solved t then Ok t
+      else
+        match try_all_strategies t with
+        | Some new_t -> solve' new_t
+        | None -> Error "Unable to solve. Not smart enough."
+    in
+    solve' annotated
