@@ -9,6 +9,8 @@ type t = square Array.t [@@deriving eq]
 
 let copy = Array.copy
 
+let squares t = Array.to_list t
+
 let square_of_char char =
   match char with
   | '1' .. '9' -> Filled (int_of_char char - int_of_char '0')

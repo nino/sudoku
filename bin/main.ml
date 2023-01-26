@@ -15,8 +15,14 @@ let gui_main () =
   let window = GWindow.window ~title:"Sudoku" ~border_width:10 () in
   let _ = window#connect#destroy ~callback:GMain.quit in
   let hbox = GPack.hbox ~packing:window#add () in
-  let button = GButton.button ~label:"Butto!" ~packing:hbox#pack () in
-  let _ = button#connect#clicked ~callback:GMain.quit in
+  (* let button = GButton.button ~label:"Butto!" ~packing:hbox#pack () in *)
+  (* let _ = button#connect#clicked ~callback:GMain.quit in *)
+  let board_model =
+    In_channel.(with_open_text "./assets/board3.txt" input_all)
+    |> Sudoku.of_string |> Result.get_exn
+  in
+  let board = Components.board board_model ~packing:hbox#pack () in
+  ignore board;
   window#show ();
   GMain.main ()
 

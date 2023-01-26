@@ -3,6 +3,11 @@ exception Number_ouf_of_range
 type t
 (** The sudoku board *)
 
+type square = Filled of Int.t | Annotations of Set.Make(Int).t
+
+val squares : t -> square list
+(** Gets the squares of the board *)
+
 val of_string : string -> (t, string) result
 (** creates a sudoku board when given a multiline string. Each line should
     consist of 9 characters that are either a number from 1 to 9 or a
