@@ -8,6 +8,7 @@ type located_square = int * int * square [@@deriving eq, show]
 
 let copy = Array.copy
 let squares t = Array.to_list t
+let empty = Array.init (9 * 9) (fun _ -> Annotations Int_set.empty)
 
 let square_of_char char =
   match char with

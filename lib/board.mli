@@ -6,6 +6,7 @@ type t
 type square = Filled of Int.t | Annotations of Int_set.t
 type located_square = int * int * square
 
+val empty : t
 val equal : t -> t -> bool
 val equal_square : square -> square -> bool
 val equal_located_square : located_square -> located_square -> bool

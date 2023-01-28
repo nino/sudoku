@@ -12,6 +12,13 @@ let get_int_set squares =
   in
   Int_set.of_seq just_numbers
 
+let%test "get_int_set" =
+  let some_annotations = Int_set.of_list [ 1; 3; 4 ] in
+  let collection =
+    [| Filled 1; Filled 2; Annotations some_annotations; Filled 3 |]
+  in
+  Int_set.equal (get_int_set collection) (Int_set.of_list [ 1; 2; 3 ])
+
 let numbers_visible_from t row_idx col_idx =
   let row = get_int_set (row t row_idx) in
   let col = get_int_set (col t col_idx) in
