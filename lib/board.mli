@@ -22,6 +22,10 @@ val of_string : string -> (t, string) result
     consist of 9 characters that are either a number from 1 to 9 or a
     period. *)
 
+val to_string : t -> string
+(** returns a simple string version of the board. Annotations are ignored, and
+    non-filled cells are shown as '.' *)
+
 val is_probably_valid : t -> bool
 (** Checks if the board is valid, as far as we can tell without filling in any
     additional squares. I.e., this function will count any board as "probably

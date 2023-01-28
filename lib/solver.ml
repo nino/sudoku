@@ -26,6 +26,44 @@ let numbers_visible_from t row_idx col_idx =
   let ( $ ) = Int_set.union in
   row $ col $ house
 
+let%test "numbers_visible_from sees itself" =
+  let board =
+    of_string
+      {|
+        1........
+        .........
+        .........
+        .........
+        .........
+        .........
+        .........
+        .........
+        .........
+      |}
+    |> Result.get_exn
+  in
+  Int_set.equal (numbers_visible_from board 0 0) (Int_set.of_list [ 1 ])
+
+let%test "numbers_visible_from sees stuff from row, col, and house" =
+  let board =
+    of_string
+      {|
+        1...8....
+        .2..7....
+        ..3......
+        .3.......
+        .4.......
+        .........
+        .........
+        .6.......
+        .........
+      |}
+    |> Result.get_exn
+  in
+  Int_set.equal
+    (numbers_visible_from board 1 1)
+    (Int_set.of_list [ 1; 2; 3; 4; 6; 7 ])
+
 let candidates_for_number_in_subcollection number subcollection =
   let is_candidate (_row, _col, square) =
     match square with Annotations ann -> Int_set.mem number ann | _ -> false
@@ -39,6 +77,24 @@ let fully_annotate t =
       | Filled _ -> t
       | Annotations _ -> annotate_square t row col all_numbers)
     t all_coordinates
+
+let%test "fully_annotate doesn't annotate filled cells" =
+  let board =
+    of_string
+      {|
+        658923714
+        742168539
+        931475628
+        395684271
+        814237965
+        267519843
+        186392457
+        529741386
+        473856192
+      |}
+    |> Result.get_exn
+  in
+  equal board (fully_annotate board)
 
 let remove_directly_seen_numbers_from_annotations t =
   Seq.fold_left
@@ -61,6 +117,11 @@ let fill_obvious_squares t =
             fill_square t row col (Int_set.choose ann)
           else t)
     t all_coordinates
+
+let%test "fill_obvious_squares" =
+  let board = annotate_square empty 4 8 (Int_set.of_list [ 7 ]) in
+  let board = annotate_square board 1 1 (Int_set.of_list [ 1; 2 ]) in
+  equal (fill_obvious_squares board) (fill_square board 4 8 7)
 
 let hidden_singles t =
   let hidden_singles_for_one_subcollection t coll =

@@ -124,3 +124,11 @@ let print_board t =
 
 let string_of_intset s =
   Int_set.to_seq s |> Seq.map string_of_int |> List.of_seq |> String.concat ","
+
+let to_string t =
+  let row_to_string row =
+    Array.to_list row
+    |> List.map (function Filled n -> string_of_int n | _ -> ".")
+    |> String.concat ""
+  in
+  String.concat "\n" (List.map row_to_string (rows t))
