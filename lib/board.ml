@@ -1,27 +1,19 @@
-module IntSet = struct
-  module IntSet' = Set.Make (Int)
-  include IntSet'
-
-  let pp fmt t =
-    Format.fprintf fmt "%s"
-      (String.concat ", " (List.map string_of_int (IntSet'.to_list t)))
-end
-
-let all_numbers = IntSet.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9 ]
+let all_numbers = Int_set.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9 ]
 
 exception Number_ouf_of_range
 
-type square = Filled of Int.t | Annotations of IntSet.t [@@deriving eq, show]
+type square = Filled of Int.t | Annotations of Int_set.t [@@deriving eq, show]
 type t = square Array.t [@@deriving eq, show]
+type located_square = int * int * square [@@deriving eq, show]
 
 let copy = Array.copy
-
 let squares t = Array.to_list t
+let empty = Array.init (9 * 9) (fun _ -> Annotations Int_set.empty)
 
 let square_of_char char =
   match char with
   | '1' .. '9' -> Filled (int_of_char char - int_of_char '0')
-  | '.' -> Annotations IntSet.empty
+  | '.' -> Annotations Int_set.empty
   | _ -> failwith ("Invalid character '" ^ String.make 1 char ^ "'")
 
 let of_string str =
@@ -49,15 +41,15 @@ let get_int_set squares =
   let just_numbers =
     Seq.filter_map (function Filled n -> Some n | _ -> None) seq
   in
-  IntSet.of_seq just_numbers
+  Int_set.of_seq just_numbers
 
 let is_valid_subset squares =
   let numbers =
     Array.to_list squares
     |> List.filter_map (function Filled n -> Some n | Annotations _ -> None)
   in
-  let numbers_set = IntSet.of_list numbers in
-  IntSet.cardinal numbers_set = List.length numbers
+  let numbers_set = Int_set.of_list numbers in
+  Int_set.cardinal numbers_set = List.length numbers
 
 let row t row_idx = Array.init 9 (fun col_idx -> at t row_idx col_idx)
 let rows t = Seq.init 9 (row t) |> List.of_seq
@@ -70,6 +62,12 @@ let house t row col =
           at t ((row * 3) + row_offset) ((col * 3) + col_offset)))
   |> Seq.concat |> Array.of_seq
 
+let house_with_locations t row col =
+  Seq.init 3 (fun row_offset ->
+      Seq.init 3 (fun col_offset ->
+          (row, col, at t ((row * 3) + row_offset) ((col * 3) + col_offset))))
+  |> Seq.concat |> Array.of_seq
+
 let house_around t row col =
   let house_row = row / 3 in
   let house_col = col / 3 in
@@ -80,18 +78,23 @@ let houses t =
       Seq.init 3 (fun house_col -> house t house_row house_col))
   |> Seq.concat |> List.of_seq
 
+let houses_with_locations t =
+  Seq.init 3 (fun house_row ->
+      Seq.init 3 (fun house_col -> house_with_locations t house_row house_col))
+  |> Seq.concat |> List.of_seq
+
 let is_probably_valid t =
   List.for_all is_valid_subset (rows t)
   && List.for_all is_valid_subset (columns t)
   && List.for_all is_valid_subset (houses t)
 
 let is_solved t =
-  List.for_all (fun row -> IntSet.equal (get_int_set row) all_numbers) (rows t)
+  List.for_all (fun row -> Int_set.equal (get_int_set row) all_numbers) (rows t)
   && List.for_all
-       (fun col -> IntSet.equal (get_int_set col) all_numbers)
+       (fun col -> Int_set.equal (get_int_set col) all_numbers)
        (columns t)
   && List.for_all
-       (fun house -> IntSet.equal (get_int_set house) all_numbers)
+       (fun house -> Int_set.equal (get_int_set house) all_numbers)
        (houses t)
 
 let is_really_valid t =
@@ -119,78 +122,13 @@ let print_board t =
          Array.iter print_square_simple row;
          print_newline ())
 
-let numbers_visible_from t row_idx col_idx =
-  let row = get_int_set (row t row_idx) in
-  let col = get_int_set (col t col_idx) in
-  let house = get_int_set (house_around t row_idx col_idx) in
-  let ( $ ) = IntSet.union in
-  row $ col $ house
-
-let fully_annotate t =
-  Seq.fold_left
-    (fun t (row, col) ->
-      match at t row col with
-      | Filled _ -> t
-      | Annotations _ -> annotate_square t row col all_numbers)
-    t all_coordinates
-
 let string_of_intset s =
-  IntSet.to_seq s |> Seq.map string_of_int |> List.of_seq |> String.concat ","
+  Int_set.to_seq s |> Seq.map string_of_int |> List.of_seq |> String.concat ","
 
-let remove_directly_seen_numbers_from_annotations t =
-  Seq.fold_left
-    (fun t (row, col) ->
-      match at t row col with
-      | Filled _ -> t
-      | Annotations annotations ->
-          let seen = numbers_visible_from t row col in
-          let new_annotations = IntSet.diff annotations seen in
-          annotate_square t row col new_annotations)
-    t all_coordinates
-
-let fill_obvious_squares t =
-  Seq.fold_left
-    (fun t (row, col) ->
-      match at t row col with
-      | Filled _ -> t
-      | Annotations ann ->
-          if IntSet.cardinal ann = 1 then
-            fill_square t row col (IntSet.choose ann)
-          else t)
-    t all_coordinates
-
-let project_rows_from_houses t = t
-let project_cols_from_houses t = t
-let x_wing t = t
-let y_wing t = t
-
-let try_all_strategies t =
-  let strategies =
-    [
-      remove_directly_seen_numbers_from_annotations;
-      fill_obvious_squares;
-      project_rows_from_houses;
-      project_cols_from_houses;
-      x_wing;
-      y_wing;
-    ]
+let to_string t =
+  let row_to_string row =
+    Array.to_list row
+    |> List.map (function Filled n -> string_of_int n | _ -> ".")
+    |> String.concat ""
   in
-  (* Return the result of the first strategy that makes progress *)
-  List.find_map
-    (fun strat ->
-      let res = strat t in
-      if not (equal res t) then Some res else None)
-    strategies
-
-let solve t =
-  let annotated = fully_annotate t in
-  if not (is_probably_valid t) then Error "The board is invalid"
-  else
-    let rec solve' t =
-      if is_solved t then Ok t
-      else
-        match try_all_strategies t with
-        | Some new_t -> solve' new_t
-        | None -> Error "Unable to solve. Not smart enough."
-    in
-    solve' annotated
+  String.concat "\n" (List.map row_to_string (rows t))
