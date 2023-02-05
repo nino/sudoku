@@ -1,15 +1,15 @@
-(* let styles = {| *)
-(*   .annotation { *)
-(*     font-size: 4px; *)
-(*     color: green; *)
-(*   } *)
-(* |} *)
+let styles =
+  {|
+     .annotation {
+       font-size: 4px;
+       color: green;
+     }
+   |}
 
-
-(* let css_provider_from_data data = *)
-(*   let provider = GObj.css_provider () in *)
-(*   provider#load_from_data data; *)
-(*   provider *)
+let css_provider_from_data data =
+  let provider = GObj.css_provider () in
+  provider#load_from_data data;
+  provider
 
 let solve fname =
   let board =

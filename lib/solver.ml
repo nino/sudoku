@@ -2,9 +2,6 @@ open Board
 
 let all_numbers = Int_set.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9 ]
 
-type located_square = int * int * square [@@deriving eq, show]
-(** Coordinates plus square *)
-
 let get_int_set squares =
   List.filter_map
     (function _row, _col, Filled n -> Some n | _row, _col, _ -> None)
