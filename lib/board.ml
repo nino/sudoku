@@ -2,13 +2,15 @@ let all_numbers = Int_set.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9 ]
 
 exception Number_ouf_of_range
 
-type square = Filled of Int.t | Annotations of Int_set.t [@@deriving eq, show]
-type t = square Array.t [@@deriving eq, show]
-type located_square = int * int * square [@@deriving eq, show]
+type plain_square = Filled of Int.t | Annotations of Int_set.t
+[@@deriving eq, show]
+
+type t = plain_square Array.t [@@deriving eq, show]
+type square = int * int * plain_square [@@deriving eq, show]
 
 let copy = Array.copy
-let squares t = Array.to_list t
 let empty = Array.init (9 * 9) (fun _ -> Annotations Int_set.empty)
+let fully_annotated = Array.init (9 * 9) (fun _ -> Annotations all_numbers)
 
 let square_of_char char =
   match char with
@@ -34,42 +36,38 @@ let of_string str =
     Ok (Array.of_list squares)
 
 let idx_of_coords row col = (row * 9) + col
-let at t row col = t.(idx_of_coords row col)
+let at t row col = (row, col, t.(idx_of_coords row col))
 
 let all_coordinates =
   Seq.init 9 (fun row -> Seq.init 9 (fun col -> (row, col))) |> Seq.concat
 
-let get_int_set squares =
-  let seq = Array.to_seq squares in
+let get_int_set (squares : square list) =
   let just_numbers =
-    Seq.filter_map (function Filled n -> Some n | _ -> None) seq
+    List.filter_map
+      (function _, _, Filled n -> Some n | _, _, _ -> None)
+      squares
   in
-  Int_set.of_seq just_numbers
+  Int_set.of_list just_numbers
 
 let is_valid_subset squares =
   let numbers =
-    Array.to_list squares
-    |> List.filter_map (function Filled n -> Some n | Annotations _ -> None)
+    List.filter_map
+      (function _, _, Filled n -> Some n | _, _, Annotations _ -> None)
+      squares
   in
   let numbers_set = Int_set.of_list numbers in
   Int_set.cardinal numbers_set = List.length numbers
 
-let row t row_idx = Array.init 9 (fun col_idx -> at t row_idx col_idx)
-let rows t = Seq.init 9 (row t) |> List.of_seq
-let col t col_idx = Array.init 9 (fun row_idx -> at t row_idx col_idx)
-let columns t = Seq.init 9 (col t) |> List.of_seq
+let row t row_idx = List.init 9 (fun col_idx -> at t row_idx col_idx)
+let rows t = List.init 9 (row t)
+let col t col_idx = List.init 9 (fun row_idx -> at t row_idx col_idx)
+let columns t = List.init 9 (col t)
 
 let house t row col =
   Seq.init 3 (fun row_offset ->
       Seq.init 3 (fun col_offset ->
           at t ((row * 3) + row_offset) ((col * 3) + col_offset)))
-  |> Seq.concat |> Array.of_seq
-
-let house_with_locations t row col =
-  Seq.init 3 (fun row_offset ->
-      Seq.init 3 (fun col_offset ->
-          (row, col, at t ((row * 3) + row_offset) ((col * 3) + col_offset))))
-  |> Seq.concat |> Array.of_seq
+  |> Seq.concat |> List.of_seq
 
 let house_around t row col =
   let house_row = row / 3 in
@@ -81,12 +79,7 @@ let houses t =
       Seq.init 3 (fun house_col -> house t house_row house_col))
   |> Seq.concat |> List.of_seq
 
-let houses_with_locations t =
-  Seq.init 3 (fun house_row ->
-      Seq.init 3 (fun house_col -> house_with_locations t house_row house_col))
-  |> Seq.concat |> List.of_seq
-
-let is_probably_valid t =
+let is_probably_valid (t : t) : bool =
   List.for_all is_valid_subset (rows t)
   && List.for_all is_valid_subset (columns t)
   && List.for_all is_valid_subset (houses t)
@@ -116,13 +109,13 @@ let annotate_square t row col set =
   new_t
 
 let print_square_simple = function
-  | Filled int -> print_int int
-  | _ -> print_char '.'
+  | _, _, Filled int -> print_int int
+  | _, _, _ -> print_char '.'
 
 let print_board t =
   rows t
   |> List.iter (fun row ->
-         Array.iter print_square_simple row;
+         List.iter print_square_simple row;
          print_newline ())
 
 let string_of_intset s =
@@ -130,8 +123,8 @@ let string_of_intset s =
 
 let to_string t =
   let row_to_string row =
-    Array.to_list row
-    |> List.map (function Filled n -> string_of_int n | _ -> ".")
+    row
+    |> List.map (function _, _, Filled n -> string_of_int n | _, _, _ -> ".")
     |> String.concat ""
   in
   String.concat "\n" (List.map row_to_string (rows t))

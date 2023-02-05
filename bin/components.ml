@@ -25,7 +25,9 @@ let square square ~packing () =
 
 let board board ~packing () =
   let grid = GPack.grid ~width:9 ~height:9 ~packing () in
-  ListLabels.iteri (Sudoku.Board.squares board) ~f:(fun idx sq ->
-      ignore
-        (square sq ~packing:(grid#attach ~left:(idx mod 9) ~top:(idx / 9)) ()));
+  Seq.iter
+    (fun (row, col) ->
+      let _, _, sq = Sudoku.Board.at board row col in
+      ignore (square sq ~packing:(grid#attach ~left:col ~top:row) ()))
+    Sudoku.Board.all_coordinates;
   grid

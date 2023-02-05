@@ -6,16 +6,20 @@ type located_square = int * int * square [@@deriving eq, show]
 (** Coordinates plus square *)
 
 let get_int_set squares =
-  let seq = Array.to_seq squares in
-  let just_numbers =
-    Seq.filter_map (function Filled n -> Some n | _ -> None) seq
-  in
-  Int_set.of_seq just_numbers
+  List.filter_map
+    (function _row, _col, Filled n -> Some n | _row, _col, _ -> None)
+    squares
+  |> Int_set.of_list
 
 let%test "get_int_set" =
   let some_annotations = Int_set.of_list [ 1; 3; 4 ] in
   let collection =
-    [| Filled 1; Filled 2; Annotations some_annotations; Filled 3 |]
+    [
+      (0, 0, Filled 1);
+      (1, 1, Filled 2);
+      (2, 2, Annotations some_annotations);
+      (3, 3, Filled 3);
+    ]
   in
   Int_set.equal (get_int_set collection) (Int_set.of_list [ 1; 2; 3 ])
 
@@ -65,17 +69,19 @@ let%test "numbers_visible_from sees stuff from row, col, and house" =
     (Int_set.of_list [ 1; 2; 3; 4; 6; 7 ])
 
 let candidates_for_number_in_subcollection number subcollection =
-  let is_candidate (_row, _col, square) =
-    match square with Annotations ann -> Int_set.mem number ann | _ -> false
+  let is_candidate square =
+    match square with
+    | _row, _col, Annotations ann -> Int_set.mem number ann
+    | _ -> false
   in
-  Array.filter is_candidate subcollection
+  List.filter is_candidate subcollection
 
 let fully_annotate t =
   Seq.fold_left
     (fun t (row, col) ->
       match at t row col with
-      | Filled _ -> t
-      | Annotations _ -> annotate_square t row col all_numbers)
+      | _row, _col, Filled _ -> t
+      | _row, _col, Annotations _ -> annotate_square t row col all_numbers)
     t all_coordinates
 
 let%test "fully_annotate doesn't annotate filled cells" =
@@ -100,8 +106,8 @@ let remove_directly_seen_numbers_from_annotations t =
   Seq.fold_left
     (fun t (row, col) ->
       match at t row col with
-      | Filled _ -> t
-      | Annotations annotations ->
+      | _, _, Filled _ -> t
+      | _, _, Annotations annotations ->
           let seen = numbers_visible_from t row col in
           let new_annotations = Int_set.diff annotations seen in
           annotate_square t row col new_annotations)
@@ -111,8 +117,8 @@ let fill_obvious_squares t =
   Seq.fold_left
     (fun t (row, col) ->
       match at t row col with
-      | Filled _ -> t
-      | Annotations ann ->
+      | _, _, Filled _ -> t
+      | _, _, Annotations ann ->
           if Int_set.cardinal ann = 1 then
             fill_square t row col (Int_set.choose ann)
           else t)
@@ -128,12 +134,17 @@ let hidden_singles t =
     Int_set.fold
       (fun number t ->
         match candidates_for_number_in_subcollection number coll with
-        | [| (row, col, _square) |] -> fill_square t row col number
+        | [ (row, col, _square) ] -> fill_square t row col number
         | _ -> t)
       all_numbers t
   in
-  List.fold_left hidden_singles_for_one_subcollection t
-    (houses_with_locations t)
+  (*
+  For each house/row/col: 
+    - For each number 1..9:
+      - Get coordinates that could hold the number
+      - If the set has only 1 item, fill it
+   *)
+  List.fold_left hidden_singles_for_one_subcollection t (houses t)
 
 let%test "" = true
 
