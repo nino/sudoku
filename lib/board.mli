@@ -3,19 +3,16 @@ exception Number_ouf_of_range
 type t
 (** The sudoku board *)
 
-type square = Filled of Int.t | Annotations of Int_set.t
-type located_square = int * int * square
+type plain_square = Filled of Int.t | Annotations of Int_set.t
+type square = int * int * plain_square
 
 val empty : t
 val equal : t -> t -> bool
+val equal_plain_square : plain_square -> plain_square -> bool
 val equal_square : square -> square -> bool
-val equal_located_square : located_square -> located_square -> bool
 val pp : Format.formatter -> t -> unit
+val pp_plain_square : Format.formatter -> plain_square -> unit
 val pp_square : Format.formatter -> square -> unit
-val pp_located_square : Format.formatter -> located_square -> unit
-
-val squares : t -> square list
-(** Gets the squares of the board *)
 
 val of_string : string -> (t, string) result
 (** creates a sudoku board when given a multiline string. Each line should
@@ -43,10 +40,12 @@ val fill_square : t -> int -> int -> int -> t
 
 val print_board : t -> unit
 val at : t -> int -> int -> square
-val row : t -> int -> square array
-val col : t -> int -> square array
-val houses_with_locations : t -> located_square array list
-val house_around : t -> int -> int -> square array
+val row : t -> int -> square list
+val col : t -> int -> square list
+val rows : t -> square list list
+val columns : t -> square list list
+val houses : t -> square list list
+val house_around : t -> int -> int -> square list
 val annotate_square : t -> int -> int -> Int_set.t -> t
 val all_coordinates : (int * int) Seq.t
 val is_solved : t -> bool
