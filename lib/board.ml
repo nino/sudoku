@@ -16,6 +16,9 @@ let square_of_char char =
   | '.' -> Annotations Int_set.empty
   | _ -> failwith ("Invalid character '" ^ String.make 1 char ^ "'")
 
+(* TODO of_full_string and to_full_string, using the layout from bigboard.txt *)
+(* TODO the exported [square] type should be what is currently [located_square] *)
+
 let of_string str =
   let str = String.trim str in
   let rows = String.split_on_char '\n' str |> List.map String.trim in

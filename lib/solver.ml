@@ -132,14 +132,10 @@ let hidden_singles t =
         | _ -> t)
       all_numbers t
   in
-  (*
-  For each house/row/col: 
-    - For each number 1..9:
-      - Get coordinates that could hold the number
-      - If the set has only 1 item, fill it
-   *)
   List.fold_left hidden_singles_for_one_subcollection t
     (houses_with_locations t)
+
+let%test "" = true
 
 let project_rows_from_houses t = t
 let project_cols_from_houses t = t

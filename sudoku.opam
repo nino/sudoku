@@ -18,6 +18,7 @@ depends: [
   "containers"
   "sexplib"
   "ppx_deriving"
+  "lablgtk3"
   "odoc" {with-doc}
 ]
 build: [

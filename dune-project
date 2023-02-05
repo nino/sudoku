@@ -19,7 +19,7 @@
  (name sudoku)
  (synopsis "Sudoku library")
  (description "Sudoku library written in OCaml that can solve your sudokus and help you write sudoku games.")
- (depends ocaml dune containers ppx_inline_test containers sexplib ppx_deriving)
+ (depends ocaml dune containers ppx_inline_test containers sexplib ppx_deriving lablgtk3)
  (tags
   (topics "to describe" your project)))
 
