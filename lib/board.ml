@@ -20,6 +20,69 @@ let square_of_char char =
 
 (* TODO of_full_string and to_full_string, using the layout from bigboard.txt *)
 
+module Parsing = struct
+  let char_to_num = function
+    | '1' .. '9' as char -> Some (int_of_char char - int_of_char '0')
+    | _ -> None
+
+  let plain_square_of_full_string (str : string) : (plain_square, string) result
+      =
+    let combined = String.replace ~sub:"\n" ~by:"" str in
+    if String.length combined <> 9 then
+      Error
+        "square description must be 9 characters long (plus newlines, which \
+         are ignored"
+    else if Char.equal combined.[0] '.' then
+      match combined.[4 (* the middle *)] with
+      | '1' .. '9' as char -> Ok (Filled (int_of_char char - int_of_char '0'))
+      | _ -> Error "invalid number in square"
+    else if
+      String.exists
+        (function '1' .. '9' -> false | ' ' -> false | _ -> true)
+        combined
+    then Error "invalid annotations in square"
+    else
+      Ok
+        (Annotations
+           (String.to_list combined
+           |> List.filter_map char_to_num
+           |> Int_set.of_list))
+
+  let%test "parse empty square" =
+    equal_plain_square
+      (plain_square_of_full_string (String.concat "\n" [ "   "; "   "; "   " ])
+      |> Result.get_exn)
+      (Annotations Int_set.empty)
+
+  let%test "parse fully annotated square" =
+    equal_plain_square
+      (plain_square_of_full_string (String.concat "\n" [ "123"; "456"; "789" ])
+      |> Result.get_exn)
+      (Annotations all_numbers)
+
+  let%test "parse some annotations" =
+    equal_plain_square
+      (plain_square_of_full_string (String.concat "\n" [ "  3"; "45 "; "  9" ])
+      |> Result.get_exn)
+      (Annotations (Int_set.of_list [ 3; 4; 5; 9 ]))
+
+  let%test "parse filled" =
+    equal_plain_square
+      (plain_square_of_full_string (String.concat "\n" [ "..."; ".5."; "..." ])
+      |> Result.get_exn)
+      (Filled 5)
+
+  let%test "fail to parse zero" =
+    Result.is_error
+      (plain_square_of_full_string (String.concat "\n" [ "..."; ".0."; "..." ]))
+
+  let%test "fail to parse letter" =
+    Result.is_error
+      (plain_square_of_full_string (String.concat "\n" [ "..."; ".f."; "..." ]))
+
+  let of_full_string (str : string) : t = empty
+end
+
 let of_string str =
   let str = String.trim str in
   let rows = String.split_on_char '\n' str |> List.map String.trim in
