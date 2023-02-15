@@ -4,7 +4,7 @@ let all_numbers = Int_set.of_list [ 1; 2; 3; 4; 5; 6; 7; 8; 9 ]
 
 let get_int_set squares =
   List.filter_map
-    (function _row, _col, Filled n -> Some n | _row, _col, _ -> None)
+    ~f:(function _row, _col, Filled n -> Some n | _row, _col, _ -> None)
     squares
   |> Int_set.of_list
 
@@ -71,7 +71,7 @@ let candidates_for_number_in_subcollection number subcollection =
     | _row, _col, Annotations ann -> Int_set.mem number ann
     | _ -> false
   in
-  List.filter is_candidate subcollection
+  List.filter ~f:is_candidate subcollection
 
 let fully_annotate t =
   Seq.fold_left
@@ -141,11 +141,20 @@ let hidden_singles t =
       - Get coordinates that could hold the number
       - If the set has only 1 item, fill it
    *)
-  List.fold_left hidden_singles_for_one_subcollection t (houses t)
+  List.fold_left ~f:hidden_singles_for_one_subcollection ~init:t (houses t)
 
 let%test "" = true
 
 let project_rows_from_houses t = t
+(* let project_rows_from_houses (t : t) : t = *)
+(*   let execute_for_number number t = *)
+(*     List.fold (houses t) ~f:(fun house -> *)
+
+(*     ) *)
+
+(*   in *)
+(*   Int_set.fold execute_for_number all_numbers t *)
+
 let project_cols_from_houses t = t
 let x_wing t = t
 let y_wing t = t
@@ -164,7 +173,7 @@ let try_all_strategies t =
   in
   (* Return the result of the first strategy that makes progress *)
   List.find_map
-    (fun strat ->
+    ~f:(fun strat ->
       let res = strat t in
       if not (equal res t) then Some res else None)
     strategies

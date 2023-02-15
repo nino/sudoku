@@ -9,8 +9,8 @@ type t = plain_square Array.t [@@deriving eq, show]
 type square = int * int * plain_square [@@deriving eq, show]
 
 let copy = Array.copy
-let empty = Array.init (9 * 9) (fun _ -> Annotations Int_set.empty)
-let fully_annotated = Array.init (9 * 9) (fun _ -> Annotations all_numbers)
+let empty = Array.init (9 * 9) ~f:(fun _ -> Annotations Int_set.empty)
+let fully_annotated = Array.init (9 * 9) ~f:(fun _ -> Annotations all_numbers)
 
 let square_of_char char =
   match char with
@@ -38,61 +38,68 @@ module Parsing = struct
       | _ -> Error "invalid number in square"
     else if
       String.exists
-        (function '1' .. '9' -> false | ' ' -> false | _ -> true)
+        ~f:(function '1' .. '9' -> false | ' ' -> false | _ -> true)
         combined
     then Error "invalid annotations in square"
     else
       Ok
         (Annotations
            (String.to_list combined
-           |> List.filter_map char_to_num
+           |> List.filter_map ~f:char_to_num
            |> Int_set.of_list))
 
   let%test "parse empty square" =
     equal_plain_square
-      (plain_square_of_full_string (String.concat "\n" [ "   "; "   "; "   " ])
+      (plain_square_of_full_string
+         (String.concat ~sep:"\n" [ "   "; "   "; "   " ])
       |> Result.get_exn)
       (Annotations Int_set.empty)
 
   let%test "parse fully annotated square" =
     equal_plain_square
-      (plain_square_of_full_string (String.concat "\n" [ "123"; "456"; "789" ])
+      (plain_square_of_full_string
+         (String.concat ~sep:"\n" [ "123"; "456"; "789" ])
       |> Result.get_exn)
       (Annotations all_numbers)
 
   let%test "parse some annotations" =
     equal_plain_square
-      (plain_square_of_full_string (String.concat "\n" [ "  3"; "45 "; "  9" ])
+      (plain_square_of_full_string
+         (String.concat ~sep:"\n" [ "  3"; "45 "; "  9" ])
       |> Result.get_exn)
       (Annotations (Int_set.of_list [ 3; 4; 5; 9 ]))
 
   let%test "parse filled" =
     equal_plain_square
-      (plain_square_of_full_string (String.concat "\n" [ "..."; ".5."; "..." ])
+      (plain_square_of_full_string
+         (String.concat ~sep:"\n" [ "..."; ".5."; "..." ])
       |> Result.get_exn)
       (Filled 5)
 
   let%test "fail to parse zero" =
     Result.is_error
-      (plain_square_of_full_string (String.concat "\n" [ "..."; ".0."; "..." ]))
+      (plain_square_of_full_string
+         (String.concat ~sep:"\n" [ "..."; ".0."; "..." ]))
 
   let%test "fail to parse letter" =
     Result.is_error
-      (plain_square_of_full_string (String.concat "\n" [ "..."; ".f."; "..." ]))
+      (plain_square_of_full_string
+         (String.concat ~sep:"\n" [ "..."; ".f."; "..." ]))
 
   let of_full_string (str : string) : t = empty
 end
 
 let of_string str =
   let str = String.trim str in
-  let rows = String.split_on_char '\n' str |> List.map String.trim in
+  let rows = String.split_on_char ~by:'\n' str |> List.map ~f:String.trim in
   if List.length rows <> 9 then Error "Need exactly 9 rows"
-  else if not (List.for_all (fun row -> String.length row = 9) rows) then
+  else if not (List.for_all ~f:(fun row -> String.length row = 9) rows) then
     Error "Every row needs to be 9 long"
   else
     let squares =
       List.concat_map
-        (fun row -> String.to_seq row |> Seq.map square_of_char |> List.of_seq)
+        ~f:(fun row ->
+          String.to_seq row |> Seq.map square_of_char |> List.of_seq)
         rows
     in
     Ok (Array.of_list squares)
@@ -106,7 +113,7 @@ let all_coordinates =
 let get_int_set (squares : square list) =
   let just_numbers =
     List.filter_map
-      (function _, _, Filled n -> Some n | _, _, _ -> None)
+      ~f:(function _, _, Filled n -> Some n | _, _, _ -> None)
       squares
   in
   Int_set.of_list just_numbers
@@ -114,16 +121,16 @@ let get_int_set (squares : square list) =
 let is_valid_subset squares =
   let numbers =
     List.filter_map
-      (function _, _, Filled n -> Some n | _, _, Annotations _ -> None)
+      ~f:(function _, _, Filled n -> Some n | _, _, Annotations _ -> None)
       squares
   in
   let numbers_set = Int_set.of_list numbers in
   Int_set.cardinal numbers_set = List.length numbers
 
-let row t row_idx = List.init 9 (fun col_idx -> at t row_idx col_idx)
-let rows t = List.init 9 (row t)
-let col t col_idx = List.init 9 (fun row_idx -> at t row_idx col_idx)
-let columns t = List.init 9 (col t)
+let row t row_idx = List.init 9 ~f:(fun col_idx -> at t row_idx col_idx)
+let rows t = List.init 9 ~f:(row t)
+let col t col_idx = List.init 9 ~f:(fun row_idx -> at t row_idx col_idx)
+let columns t = List.init 9 ~f:(col t)
 
 let house t row col =
   Seq.init 3 (fun row_offset ->
@@ -142,17 +149,19 @@ let houses t =
   |> Seq.concat |> List.of_seq
 
 let is_probably_valid (t : t) : bool =
-  List.for_all is_valid_subset (rows t)
-  && List.for_all is_valid_subset (columns t)
-  && List.for_all is_valid_subset (houses t)
+  List.for_all ~f:is_valid_subset (rows t)
+  && List.for_all ~f:is_valid_subset (columns t)
+  && List.for_all ~f:is_valid_subset (houses t)
 
 let is_solved t =
-  List.for_all (fun row -> Int_set.equal (get_int_set row) all_numbers) (rows t)
+  List.for_all
+    ~f:(fun row -> Int_set.equal (get_int_set row) all_numbers)
+    (rows t)
   && List.for_all
-       (fun col -> Int_set.equal (get_int_set col) all_numbers)
+       ~f:(fun col -> Int_set.equal (get_int_set col) all_numbers)
        (columns t)
   && List.for_all
-       (fun house -> Int_set.equal (get_int_set house) all_numbers)
+       ~f:(fun house -> Int_set.equal (get_int_set house) all_numbers)
        (houses t)
 
 let is_really_valid t =
@@ -175,18 +184,19 @@ let print_square_simple = function
   | _, _, _ -> print_char '.'
 
 let print_board t =
-  rows t
-  |> List.iter (fun row ->
-         List.iter print_square_simple row;
-         print_newline ())
+  List.iter (rows t) ~f:(fun row ->
+      List.iter ~f:print_square_simple row;
+      print_newline ())
 
 let string_of_intset s =
-  Int_set.to_seq s |> Seq.map string_of_int |> List.of_seq |> String.concat ","
+  Int_set.to_seq s |> Seq.map string_of_int |> List.of_seq
+  |> String.concat ~sep:","
 
 let to_string t =
   let row_to_string row =
-    row
-    |> List.map (function _, _, Filled n -> string_of_int n | _, _, _ -> ".")
-    |> String.concat ""
+    List.map row ~f:(function
+      | _, _, Filled n -> string_of_int n
+      | _, _, _ -> ".")
+    |> String.concat ~sep:""
   in
-  String.concat "\n" (List.map row_to_string (rows t))
+  String.concat ~sep:"\n" (List.map ~f:row_to_string (rows t))
