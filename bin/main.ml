@@ -1,3 +1,4 @@
+(* TODO use Bogue for UI https://sanette.github.io/bogue/Principles.html *)
 let styles =
   {|
      .annotation {
